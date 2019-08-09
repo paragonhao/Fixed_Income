@@ -1,0 +1,7 @@
+"0","cf <- 6.25"
+"0","discount <- 0.07"
+"0","price <- cf/(discount/2)"
+"0","cat(""willing to pay "", price)"
+"1","willing to pay "
+"1"," "
+"1","178.5714"

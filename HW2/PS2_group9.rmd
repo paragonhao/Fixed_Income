@@ -1,0 +1,181 @@
+---
+header-includes:
+- \usepackage{amssymb, amsmath, amsthm}
+- \usepackage{tabu}
+- \newcommand{\E}{\mathbb{E}}
+- \newcommand{\var}{{\rm Var}}
+- \newcommand{\N}{\mathcal{N}}
+output: pdf_document
+---
+
+\noindent \begin{tabu} to \textwidth {@{}X[4 l] @{}X[r]}
+  \textbf{HW 2}           & \\ 
+  \textbf{MFE 408: Fixed-Income Markets}   & \\ 
+  \textbf{Professor Longstaff}         & \\
+  \textbf{Group 9}          &\\
+  \textbf{Students: Yuhua Deng, Xiahao Wang, Nupur Solanki, Haoxuan Tong}
+\end{tabu}
+
+
+```{r}
+suppressMessages(library(data.table))
+suppressMessages(library(foreign))
+suppressMessages(require(knitr))
+suppressMessages(require(ggplot2))
+bonddata <- as.data.table(read.csv("/Users/paragonhao/Documents/ucla/Dropbox/Quarter3/Fixed_Income/HW/HW2/HW2data.csv"))
+
+```
+
+## 1
+Bond price at par value is 100, hence the spot rates are calculated using the following formula
+$$\frac{100}{(1+ \frac{r}{n})^n} = p$$
+where p is the bond price, n is the number of month in this case. 
+
+```{r}
+
+spot_curve <- apply(bonddata, 1, function(x){
+  #to get number of month
+  maturity <- x[1]
+  price <- x[2]
+  
+  # get the number of month
+  n <- maturity/(1/12)
+  spot_rate <- 12 * ((100/price)^(1/n) -1)
+  return(spot_rate)
+})
+
+newbonddata <- cbind(bonddata, spot_rate = spot_curve)
+plot(x = newbonddata$Maturity, y = newbonddata$spot_rate, type="l", main="Spot Curve", xlab="spot rate", ylab="Maturiy")
+
+newbonddata[, month := Maturity/(1/12) ]
+
+newbonddata[, forward_rate := ((1/Price)/shift((1/Price)) - 1) * 4]
+
+plot(x = newbonddata$Maturity[-1], y = newbonddata$forward_rate[-1], type="l", main="Forward Curve", xlab="spot rate", ylab="Maturiy")
+
+```
+
+## 2
+
+```{r}
+bonddata <- as.data.table(read.csv("/Users/paragonhao/Documents/ucla/Dropbox/Quarter3/Fixed_Income/HW/HW2/HW2data.csv"))
+bonddata[, `:=`(LogDT = log(Price/100), T_2 = Maturity^2, T_3 = Maturity^3, T_4 = Maturity^4, T_5 = Maturity^5)]
+
+lmresult <- lm(LogDT ~ Maturity + T_2 + T_3 + T_4 + T_5 -1, data = bonddata)
+
+kable(t(lmresult$coefficients))
+```  
+
+
+## 3
+
+```{r}
+T_years <- as.data.table(seq(0.5, 25, 0.5), ncol=1)
+colnames(T_years) <- "T1"
+T_years[,`:=`(T2 = T1^2, T3= T1^3, T4=T1^4,T5=T1^5)]
+T_years[,`:=`(DT= exp(T1 * lmresult$coefficients[1] + T2 * lmresult$coefficients[2] + T3 * lmresult$coefficients[3] + T4 * lmresult$coefficients[4] + T5*lmresult$coefficients[5]))]
+
+spot_curve_strip <- apply(T_years, 1, function(x){
+  #to get number of month
+  maturity <- x[1]
+  DT <- x[6]
+  
+  # get the number of month
+  n <- maturity/(1/2)
+  spot_rate <- 2 * ((1/DT)^(1/n) -1)
+  return(spot_rate)
+})
+
+T_years <- cbind(T_years, spot_curve_strip)
+
+plot(x = T_years$T1, y = spot_curve_strip, type="l", main="Spot Curve", xlab="spot rate", ylab="Maturiy")
+```
+
+## 4
+Solve for par rate using the forumla in the notes:
+
+$$ Par \space rate = 2[\frac{100 - 100D(T)}{\Sigma^{2T}_{i=1} D(i/2)}]$$
+
+```{r}
+T_years[,`:=`(DTcumsum = cumsum(DT))]
+T_years[,par_rate := 2 * (100 - 100 * DT)/ DTcumsum]
+plot(x = T_years$T1, y = T_years$par_rate, type="l", main="Par Curve", xlab="Par rate", ylab="Maturiy")
+```
+
+## 5
+Solve for the forward rate
+```{r}
+T_years[, f_rate := (shift(DT)/DT - 1) * 2]
+plot(x = T_years$T1[-1], y = T_years$f_rate[-1], type="l", main="Forward Rate Curve", xlab="Par rate", ylab="Maturiy")
+```
+
+## 6
+
+First, we run the regression to get the coefifcients, then we used the coefficients to construct the par curve for maturity T
+
+```{r}
+tnote <- na.omit(as.data.table(read.csv("/Users/paragonhao/Documents/ucla/Dropbox/Quarter3/Fixed_Income/HW/HW2/tnote.csv")))
+bonddata6 <- as.data.table(read.csv("/Users/paragonhao/Documents/ucla/Dropbox/Quarter3/Fixed_Income/HW/HW2/HW2data.csv"))
+
+tnote[, `:=`(T2 = Maturity^2, T3 = Maturity^3, T4 = Maturity^4, T5 = Maturity^5)]
+
+tnotelm <- lm(Yield ~ Maturity + T2 + T3 + T4 + T5, data = tnote)
+
+kable(tnotelm$coefficients)
+```
+
+Find the par rate at t =0.5,1,1.5 to 25 using the fitted value of the regression. And then bootstrap the subsequence disccount factor.
+
+```{r}
+# find par rate from the regression coefficients
+qn6ans <- as.data.table(seq(0.5,25,0.5), ncol=1)
+colnames(qn6ans)<- "T1"
+
+qn6ans[, `:=`(T2 = T1^2, T3 = T1^3,T4 = T1^4,T5=T1^5)]
+
+qn6ans[, `:=`(par = (tnotelm$coefficients[1] + T1 * tnotelm$coefficients[2] + T2 * tnotelm$coefficients[3] + T3 * tnotelm$coefficients[4] + T4 * tnotelm$coefficients[5] + T5*tnotelm$coefficients[6]))]
+
+DT <- rep(0, length(qn6ans$par))
+DT[1] <- 100/(qn6ans$par[1]/2 +100)
+
+# bootstrap the discount factor 
+for(i in 2:50){
+  DT[i] <- (100 -  (qn6ans$par[i]/2 * sum(DT[1:(i-1)])))/ (100 +  qn6ans$par[i]/2)
+}
+
+qn6ans <- cbind(qn6ans, DT)
+
+# find the spot rate
+qn6ans$spot_rate <- apply(qn6ans, 1, function(x){
+  #to get number of month
+  maturity <- x[1]
+  DT <- x[7]
+  
+  # get the number of period
+  period <- maturity/0.5
+  spot_rate <- 2 * ((1/DT) ^(1/period) -1)
+  return(spot_rate)
+})
+
+# forward rate
+qn6ans[, f_rate := (shift(DT)/DT - 1) * 2]
+
+# scale par rate to be in decimal
+qn6ans[, par := par /100]
+
+ggplot(qn6ans , aes(x=T1, y = par,colour="Par Rate")) + geom_line() + geom_line(aes(x= T1, y = spot_rate, colour="Spot Rate")) + geom_line(aes(x= T1, y = f_rate,colour="6 month forward Rate"), na.rm = TRUE) + labs(title = "Spot, Par, and 6-month Forward Curves", x ="Date", y = "Spot rate, Par-rate, 6-month Forward rate")
+
+```
+
+## 7
+```{r}
+T_years[, par_rate := par_rate/100]
+
+ggplot(T_years , aes(x=T1, y = par_rate, colour="Par Rate")) + geom_line() + geom_line(aes(x= T1, y = spot_curve_strip, colour="Spot Rate")) + geom_line(aes(x= T1, y = f_rate, colour="6 month forward Rate"), na.rm = TRUE) + labs(title = "STRIP, Spot, Par, and 6-month Forward Curves", x ="Date", y = "Spot rate, Par-rate, 6-month Forward rate")
+```
+
+Comparing the two graphs, we observe that par and spot curves to be quite similar. However, the forward curve is very different. The forward rate curve fitted from STRIPS follows the shape of an inverted parabolic. Since the spot rate curve formed from the STRIPS is smoother than that formed from the par curve, the forward curve also shows a smoother trend.
+
+Also, from the lecture we learnt that bootstrapped curves are very jagged, which is true in this case. 
+
+

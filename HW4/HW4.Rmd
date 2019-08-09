@@ -1,0 +1,103 @@
+Q1 
+
+```{r}
+suppressMessages(library(data.table))
+suppressMessages(library(knitr))
+
+path <- matrix(nrow=5, ncol=6)
+path[1,] <- c(0.049, 0.058, 0.071, 0.068, 0.075, 0.092)
+path[2,] <- c(0.049, 0.044, 0.037, 0.056, 0.062, 0.069)
+path[3,] <- c(0.049, 0.031, 0.026, 0.051, 0.067, 0.048)
+path[4,] <- c(0.049, 0.050, 0.061, 0.069, 0.069, 0.060)
+path[5,] <- c(0.049, 0.044, 0.055, 0.061, 0.058, 0.065)
+
+zerop <- function(n){
+  p <- (1/5) * (exp(-mean(path[1,1:(n+1)]) * n )
+                      + exp(-mean(path[2,1:(n+1)]) * n) 
+                      + exp(-mean(path[3,1:(n+1)]) * n) 
+                      + exp(-mean(path[4,1:(n+1)]) * n)
+                      + exp(-mean(path[5,1:(n+1)]) * n))
+  return(p)
+}
+
+zeroprice <- matrix(ncol = 5, nrow=1)
+
+for(i in 1:5){
+  zeroprice[i]= zerop(i)
+}
+
+colnames(zeroprice) <- c("t_1","t_2","t_3","t_4","t_5")
+
+kable(zeroprice, caption = "Zero Coupon Bond Price")
+
+```
+
+Q2 
+
+```{r}
+k <- 0.045
+
+caplets <- function(n,k){
+  p <- (1/5) * (max(0, (path[1, (n+1)] - k)) * exp(-mean(path[1,1:(n+1)]) * n )
+                      + max(0, (path[2, (n+1)])-k) * exp(-mean(path[2,1:(n+1)]) * n) 
+                      + max(0, (path[3, (n+1)])-k) * exp(-mean(path[3,1:(n+1)]) * n) 
+                      + max(0, (path[4, (n+1)])-k) * exp(-mean(path[4,1:(n+1)]) * n)
+                      + max(0, (path[5, (n+1)])-k) * exp(-mean(path[5,1:(n+1)]) * n))
+  return(p)
+}
+
+caplet_price <- matrix(ncol=5, nrow = 1)
+for(i in 1:5){caplet_price[i] = caplets(i,k)}
+
+rate_cap_price <- sum(caplet_price)
+rate_cap_price
+```
+
+Q3 
+
+```{r}
+k <- 0.067
+floorlets <- function(n,k){
+  p <- (1/5) * (max(0, (k - path[1, (n+1)])) * exp(-mean(path[1,1:(n+1)]) * n )
+                      + max(0, (k - path[2, (n+1)])) * exp(-mean(path[2,1:(n+1)]) * n) 
+                      + max(0, (k - path[3, (n+1)])) * exp(-mean(path[3,1:(n+1)]) * n) 
+                      + max(0, (k - path[4, (n+1)])) * exp(-mean(path[4,1:(n+1)]) * n)
+                      + max(0, (k - path[5, (n+1)])) * exp(-mean(path[5,1:(n+1)]) * n))
+  return(p)
+}
+
+floorlet_price <- matrix(ncol=5, nrow=1)
+for(i in 1:5){floorlet_price[i] = floorlets(i,k)}
+
+rate_floor_price <- sum(floorlet_price)
+rate_floor_price
+```
+
+Q4 
+```{r}
+caplet5 <- caplets(5 , 0.067)
+
+floorlet5 <- floorlets(5, 0.067)
+
+```
+
+Q5 
+```{r}
+caplet5 <- caplets(5 , 0.063)
+n <- 5
+k <- 0.063
+p <- (1/5) * (max(0, (mean(path[1,]) -k ))* exp(-mean(path[1,1:(n+1)]) * n )
+                    + max(0, (mean(path[2,]) -k )) * exp(-mean(path[2,1:(n+1)]) * n) 
+                    + max(0, (mean(path[3,]) -k )) * exp(-mean(path[3,1:(n+1)]) * n) 
+                    + max(0, (mean(path[4,]) -k )) * exp(-mean(path[4,1:(n+1)]) * n)
+                    + max(0, (mean(path[5,]) -k )) * exp(-mean(path[5,1:(n+1)]) * n))
+
+
+
+```
+
+
+
+
+
+

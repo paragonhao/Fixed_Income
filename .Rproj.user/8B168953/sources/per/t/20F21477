@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1559168548842.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "418549301",
+    "id" : "20F21477",
+    "lastKnownWriteTime" : 1559274193,
+    "last_content_update" : 1559274193,
+    "path" : "~/Documents/ucla/Dropbox/Quarter3/Machine_Learning/HW/Final Project/Popular Indicators/ml_final_project.R",
+    "project_path" : null,
+    "properties" : {
+        "cursorPosition" : "103,6",
+        "scrollLine" : "68"
+    },
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

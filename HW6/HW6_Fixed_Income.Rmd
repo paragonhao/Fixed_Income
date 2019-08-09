@@ -1,0 +1,115 @@
+---
+title: "HW6 Fixed Income"
+author: "Haoxuan Tong, Yuhua Deng, Xiahao Wang, Nupur Solanki"
+date: "May 22, 2019"
+output: pdf_document
+---
+
+##Group: Haoxuan Tong, Yuhua Deng, Xiahao Wang, Nupur Solanki
+
+**Question 1**
+```{R}
+suppressMessages(library(data.table))
+suppressMessages(library(readxl))
+suppressMessages(library(xts))
+
+bdtree = read_xls('/Users/Harley/Desktop/bdttree.xls',col_names = F)
+
+pfilea = read_xlsx('/Users/Harley/Desktop/pfilea.xlsx',col_names = F)
+pfilea = sapply(pfilea$X__1[1:30], as.numeric)
+voldat = read_xlsx('/Users/Harley/Desktop/voldat.xlsx',col_names = F)
+voldat = sapply(voldat$X__1[1:29], as.numeric)
+voldat = c(0,voldat)
+
+rate_tree = data.frame(matrix(ncol = 30, nrow = 30))
+discount = data.frame(matrix(ncol = 30, nrow = 30))
+
+#Building the rate tree
+for (i in 1:30) {
+  if (i == 1) {
+    remainder = 999
+    r_star = 0
+    while (remainder > 0) {
+      r_star = r_star+0.001
+      remainder = 1/(1+r_star/2)-pfilea[1]
+    }
+    rate_tree[1,1] = r_star
+  }
+  
+  if (i != 1) {
+    r_star = 0
+    remainder = 999
+    while (remainder > 0) {
+      r_star = r_star+0.001
+      for (j in 1:i) {
+        rate_tree[j,i] = r_star*exp(-2*(j-1)*voldat[i]*sqrt(0.5))
+      }
+      
+      for (j in i:2) {
+        for (k in 1:(j-1)) {
+          if (j == i) {
+            discount[k,j] = 0.5/(1+rate_tree[k,j]/2)+0.5/(1+rate_tree[k+1,j]/2)
+          }
+          if (j != i) {
+            discount[k,j] = (0.5*discount[k,j+1])/(1+rate_tree[k,j]/2)+(0.5*discount[k+1,j+1])/(1+rate_tree[k+1,j]/2)
+          }
+          
+        }
+      }
+      discount[1,1] = discount[1,2]/(1+rate_tree[1,1]/2)
+      remainder = discount[1,1]-pfilea[i]
+    }
+  }
+}
+
+print(rate_tree, digits = 2)
+```
+```{R}
+plot(as.numeric(as.character(bdtree[1,])),pch = 2, col = "red",main = "Original vs. Replicated r*",ylab = "Rate",xlab = "Periods")
+points(as.numeric(as.character(rate_tree[1,])),pch=5, col = "blue")
+legend("bottomright", legend=c("BDT", "Replicated"),
+       col=c("red", "blue"), cex=1, pch = c(2,5))
+```
+
+As seen from plot above, the replicated rates follow closely to the original values.
+
+**Question 2**
+```{R}
+#Probability weighted expected value
+probability = data.frame(matrix(ncol = 30, nrow = 30))
+for (i in 1:30) {
+  for (j in 1:i) {
+    if (i == 1) {
+      probability[j,i] = 1
+    }
+    if (i != 1) {
+      
+      if (j == 1) {
+        probability[j,i] = probability[j,(i-1)]/2
+      }
+      if (j == i) {
+        probability[j,i] = probability[(j-1),(i-1)]/2
+      }
+      if (j != i & j != 1) {
+        probability[j,i] = probability[j,(i-1)]/2+probability[(j-1),(i-1)]/2
+      }
+      
+    }
+  }
+}
+
+
+probability_weighted = probability*rate_tree
+exp_value = colSums(probability_weighted,na.rm = T)
+plot(exp_value,cex = 0.01,main = "BDT Rate vs. Forward Rate",ylab = "Rate",xlab = "Periods")
+lines(exp_value,col = "blue")
+
+forward = numeric()
+forward[1] = (1/pfilea[1]-1)*2
+for (i in 2:30) {
+  forward[i] = (pfilea[(i-1)]/pfilea[i]-1)*2
+}
+lines(forward, col = "red")
+legend("bottomright", legend=c("Pfilea-Forward", "Replicated"),
+       col=c("red", "blue"), cex=1, pch = c(2,5))
+```

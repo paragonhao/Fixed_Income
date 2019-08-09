@@ -1,0 +1,271 @@
+---
+title: "HW5 Fixed Income"
+date: "May 14, 2019"
+output: pdf_document
+---
+
+##Group: Haoxuan Tong, Yuhua Deng, Xiahao Wang, Nupur Solanki
+
+
+#Q1 - Q4 
+```{r}
+library(data.table)
+library(ggplot2)
+library(gridExtra)
+hw5= fread("Homework_5.csv")
+```
+
+
+```{r}
+
+calculate_RMSE= function(par){
+  alphaY =0 #fixed 
+  alphaX= par[1] 
+  betaX=  par[2] 
+  betaY=  par[3] 
+  sigmaX=  par[4] 
+  sigmaY=  par[5]
+  
+    find_lnA= function(alpha,beta,sigma,Time){
+    (sigma^2/(2*beta^2) - alpha/beta)*Time  +(alpha/beta^2 - sigma^2/beta^3)*(1-exp(-beta*Time)) +sigma^2/(4*beta^3) *(1-exp(-2*beta*Time))
+    }
+  
+  find_B=function(beta,Time){1/beta *(1-exp(-beta*Time)) }
+  
+  YTM= function(X,Y,Time){
+    ytm= -find_lnA(alphaX,betaX,sigmaX,Time)/Time - find_lnA(alphaY,betaY,sigmaY,Time)/Time + X*find_B(betaX,Time)/Time  + Y*find_B(betaY,Time)/Time
+    return(ytm)}
+
+  matrix_a=matrix(ncol=2,nrow=2)
+  matrix_a[1,]= c(find_B(betaX,0.25)/0.25,find_B(betaY,0.25)/0.25)
+  matrix_a[2,]= c(find_B(betaX,10)/10, find_B(betaY,10)/10)
+  matrix_b= matrix(ncol=1,nrow=2)
+  
+  
+    for(i in 1:650){
+     matrix_b[1]=data$cmt0.25[i]+ find_lnA(alphaX,betaX,sigmaX,Time=0.25)/0.25 + find_lnA(alphaY,betaY,sigmaY,0.25)/0.25
+     matrix_b[2]=data$cmt10[i] + find_lnA(alphaX,betaX,sigmaX,Time=10)/10 + find_lnA(alphaY,betaY,sigmaY,10)/10
+     #solve X,Y for each time 
+     answer= solve(matrix_a,matrix_b)
+     data$X[i]= answer[1]
+     data$Y[i]=answer[2]
+     data$ytm2[i]=YTM(data$X[i],data$Y[i],2) 
+     data$ytm3[i]=YTM(data$X[i],data$Y[i],3)
+     data$ytm5[i]=YTM(data$X[i],data$Y[i],5) 
+     data$ytm7[i]=YTM(data$X[i],data$Y[i],7) 
+     #data$ytm10[i]=YTM(data$X[i],data$Y[i],10) 
+    }
+  
+  
+  
+RMSE = sqrt(sum((data$ytm2- data$cmt2)^2)+ sum((data$ytm3- data$cmt3)^2)+sum((data$ytm5- data$cmt5)^2)+ sum((data$ytm7- data$cmt7)^2))/(4*650)
+  
+return(RMSE)
+}
+
+```
+
+  
+```{r}
+#initial value 
+par= c(0.1,0.15,-0.1,0.2,0.2)
+
+data= hw5[,c("cmt0.25","cmt2","cmt3","cmt5","cmt7","cmt10")]
+data=data/100
+data[,`:=`(X=0,Y=0,ytm2=0,ytm3=0,ytm5=0,ytm7=0,ytm10=0)]
+data=as.data.frame(data)
+
+result = optim(par, calculate_RMSE, method = 'L-BFGS-B', 
+            lower = c(-0.9999,-0.9999,-0.9999,-0.9999,-0.9999))
+result 
+```
+
+
+#Q5 
+```{r}
+  alphaY =0 #fixed 
+  alphaX= result$par[1] 
+  betaX=  result$par[2] 
+  betaY=  result$par[3] 
+  sigmaX=  result$par[4] 
+  sigmaY=  result$par[5]
+  
+    find_lnA= function(alpha,beta,sigma,Time){
+    (sigma^2/(2*beta^2) - alpha/beta)*Time  +(alpha/beta^2 - sigma^2/beta^3)*(1-exp(-beta*Time)) +sigma^2/(4*beta^3) *(1-exp(-2*beta*Time))
+    }
+  
+  find_B=function(beta,Time){1/beta *(1-exp(-beta*Time)) }
+  
+  YTM= function(X,Y,Time){
+    ytm= -find_lnA(alphaX,betaX,sigmaX,Time)/Time - find_lnA(alphaY,betaY,sigmaY,Time)/Time + X*find_B(betaX,Time)/Time  + Y*find_B(betaY,Time)/Time
+    return(ytm)}
+
+  matrix_a=matrix(ncol=2,nrow=2)
+  matrix_a[1,]= c(find_B(betaX,0.25)/0.25,find_B(betaY,0.25)/0.25)
+  matrix_a[2,]= c(find_B(betaX,10)/10, find_B(betaY,10)/10)
+  matrix_b= matrix(ncol=1,nrow=2)
+  
+  
+    for(i in 1:650){
+     matrix_b[1]=data$cmt0.25[i]+ find_lnA(alphaX,betaX,sigmaX,Time=0.25)/0.25 + find_lnA(alphaY,betaY,sigmaY,0.25)/0.25
+     matrix_b[2]=data$cmt10[i] + find_lnA(alphaX,betaX,sigmaX,Time=10)/10 + find_lnA(alphaY,betaY,sigmaY,10)/10
+     #solve X,Y for each time 
+     answer= solve(matrix_a,matrix_b)
+     data$X[i]= answer[1]
+     data$Y[i]=answer[2]
+     data$ytm2[i]=YTM(data$X[i],data$Y[i],2) 
+     data$ytm3[i]=YTM(data$X[i],data$Y[i],3)
+     data$ytm5[i]=YTM(data$X[i],data$Y[i],5) 
+     data$ytm7[i]=YTM(data$X[i],data$Y[i],7) 
+     data$ytm10[i]=YTM(data$X[i],data$Y[i],10) 
+    }
+  
+  
+```
+
+```{r}
+ggplot(data = data, aes(x = c(1:650))) + geom_line(aes(y = X, col = 'X')) + geom_line(aes(y = Y, col = 'Y')) + ggtitle("Time dependent X, Y") 
+```
+
+```{r}
+paste("Model Mean(X) = ", mean(data$X))
+paste("Parameter Mean(X) = ", alphaX/betaX)
+paste("Model Var(X) = ", var(data$X))
+paste("Parameter Var(X) = ", sigmaX^2/(2*betaX))
+
+paste("Model Mean(Y) = ", mean(data$Y))
+paste("Parameter Mean(Y) = ", alphaY/betaY)
+paste("Model Var(Y) = ", var(data$Y))
+paste("Parameter Var(Y) = ", sigmaY^2/(2*betaY))
+
+RMSE = sqrt(sum((data$ytm2- data$cmt2)^2)+ sum((data$ytm3- data$cmt3)^2)+sum((data$ytm5- data$cmt5)^2)+ sum((data$ytm7- data$cmt7)^2))/(4*650)
+
+paste("RMSE = ", RMSE)
+```
+
+
+#Q6 
+
+###The cmt7 rates fit better than shorter maturity rates, 
+###The error is generally normally shaped with mean around zero. However, the error graphs do show some clustering effect. 
+
+```{r}
+p1= ggplot(data = data, aes(x = c(1:650))) + geom_line(aes(y = cmt2, col = 'cmt2')) + geom_line(aes(y = ytm2, col = 'fitted cmt2')) + ggtitle("CMT(2)") 
+p2= ggplot(data = data, aes(x = c(1:650))) + geom_line(aes(y = cmt3, col = 'cmt3')) + geom_line(aes(y = ytm3, col = 'fitted cmt3')) + ggtitle("CMT(3)") 
+p3= ggplot(data = data, aes(x = c(1:650))) + geom_line(aes(y = cmt5, col = 'cmt5')) + geom_line(aes(y = ytm5, col = 'fitted cmt5')) + ggtitle("CMT(5)") 
+p4= ggplot(data = data, aes(x = c(1:650))) + geom_line(aes(y = cmt7, col = 'cmt7')) + geom_line(aes(y = ytm7, col = 'fitted cmt7')) + ggtitle("CMT(7)")
+
+grid.arrange(p1, p2, p3,p4, nrow = 2)
+```
+
+```{r, echo=F }
+p5= ggplot(data = data, aes(x = c(1:650))) + geom_line(aes(y = cmt2-ytm2)) + ggtitle(paste("cmt2 error, sd=",sd(data$cmt2-data$ytm2))) 
+p6= ggplot(data = data, aes(x = c(1:650))) + geom_line(aes(y = cmt3-ytm3)) + ggtitle(paste("cmt3 error, sd=",sd(data$cmt3-data$ytm3))) 
+p7= ggplot(data = data, aes(x = c(1:650))) + geom_line(aes(y = cmt5-ytm5) )+ ggtitle(paste("cmt5 error, sd=",sd(data$cmt5-data$ytm5))) 
+p8= ggplot(data = data, aes(x = c(1:650))) + geom_line(aes(y = cmt7-ytm7) )+ ggtitle(paste("cmt7 error, sd=",sd(data$cmt7-data$ytm7))) 
+
+grid.arrange(p5, p6, p7,p8, nrow = 2)
+```
+
+
+
+#Q7 
+```{R}
+bond_maturity = 1:30
+bond_ytm = sapply(bond_maturity, 
+             function(x) YTM(X = data$X[1],Y = data$Y[1],Time = x))
+
+#First method
+hedge = function(FV = 100, ytm, maturity) {
+  time = seq(0.5,maturity,0.5)
+  CF = rep(ytm*100/2,length(time))
+  CF[length(CF)] = CF[length(CF)]+100
+  PV = CF*(1+ytm/2)^(-time*2)
+  duration = sum(PV*time)/100/(1+ytm/2)
+  convexity = sum(time*2*(1+time*2)*PV)/((1+ytm/2)^2)/4/100
+  return(c(duration,convexity))
+}
+
+duration_2 = hedge(ytm = bond_ytm[2],maturity = bond_maturity[2])[1]
+convexity_2 = hedge(ytm = bond_ytm[2],maturity = bond_maturity[2])[2]
+duration_10 = hedge(ytm = bond_ytm[10],maturity = bond_maturity[10])[1]
+convexity_10 = hedge(ytm = bond_ytm[10],maturity = bond_maturity[10])[2]
+
+position_1 = NULL
+for (i in 1:30) {
+  duration = hedge(ytm = bond_ytm[i],maturity = bond_maturity[i])[1]
+  convexity = hedge(ytm = bond_ytm[i],maturity = bond_maturity[i])[2]
+  
+  mat_a = matrix(c(100*duration_2, 
+                   100*convexity_2, 
+                   100*duration_10, 
+                   100*convexity_10), 2, 2)
+  mat_b = c(-100*duration, -100*convexity)
+  position_1 = rbind(position_1,solve(mat_a,mat_b))
+}
+
+#Second method
+price = function(ytm,coupon,maturity) {
+  time = seq(0.5,maturity,0.5)
+  CF = rep(coupon*100/2,length(time))
+  CF[length(CF)] = CF[length(CF)]+100
+  PV = CF*(1+ytm/2)^(-time*2)
+  return(sum(PV))
+}
+
+bond_coupon = bond_ytm
+bond_ytm_dx = sapply(bond_maturity, 
+             function(x) YTM(X = data$X[1]+0.01,Y = data$Y[1],Time = x))
+bond_ytm_dy = sapply(bond_maturity, 
+             function(x) YTM(X = data$X[1],Y = data$Y[1]+0.01,Time = x))
+
+dp2_dx = price(ytm = bond_ytm_dx[2], coupon = bond_coupon[2], maturity = bond_maturity[2])-price(ytm = bond_ytm[2], coupon = bond_coupon[2], maturity = bond_maturity[2])
+dp2_dy = price(ytm = bond_ytm_dy[2], coupon = bond_coupon[2], maturity = bond_maturity[2])-price(ytm = bond_ytm[2], coupon = bond_coupon[2], maturity = bond_maturity[2])
+dp10_dx = price(ytm = bond_ytm_dx[10], coupon = bond_coupon[10], maturity = bond_maturity[10])-price(ytm = bond_ytm[10], coupon = bond_coupon[10], maturity = bond_maturity[10])
+dp10_dy = price(ytm = bond_ytm_dy[10], coupon = bond_coupon[10], maturity = bond_maturity[10])-price(ytm = bond_ytm[10], coupon = bond_coupon[10], maturity = bond_maturity[10])
+
+position_2 = NULL
+for (i in 1:30) {
+  orig_price = price(ytm = bond_ytm[i], coupon = bond_coupon[i], maturity = bond_maturity[i])
+  
+  dp_dx = price(ytm = bond_ytm_dx[i], coupon = bond_coupon[i], maturity = bond_maturity[i]) - orig_price
+  
+  dp_dy = price(ytm = bond_ytm_dy[i], coupon = bond_coupon[i], maturity = bond_maturity[i]) - orig_price
+  
+  mat_a = matrix(c(dp2_dx, 
+                   dp2_dy, 
+                   dp10_dx, 
+                   dp10_dy), 2, 2)
+  mat_b = c(-dp_dx, -dp_dy)
+  position_2 = rbind(position_2,solve(mat_a,mat_b))
+
+}
+
+position = cbind(position_1, position_2)
+position= as.data.table(position)
+colnames(position) = c("2yr-Matching",
+                       "10yr-Matching",
+                       "2yr-Derivative",
+                       "10yr-Derivative")
+position
+```
+
+```{r}
+par(mfrow=c(1,2))
+plot(x=c(1:30),y=position$"2yr-Matching",type="l",ylim=c(-4,10))
+lines(x=c(1:30),y=position$`10yr-Matching`)
+plot(x=c(1:30),y=position$`2yr-Derivative`,type="l",ylim=c(-2,3))
+lines(x=c(1:30),y=position$`10yr-Derivative`)
+```
+```{r}
+
+
+```
+
+As seen from the hedging positions of the 2yr and 10yr par bonds, matching duration and convexity requires buying/selling much more units of 2yr and 10yr bonds to hedge each unit of par bond with maturity ranging from 1 to 30 years. On the contrast, heding by matching derivative with respect with X and Y from the Vasicek model performs much better as it requires significantly less units of 2yr and 10yr bonds to hedge the positions.
+
+
+
+
+
+

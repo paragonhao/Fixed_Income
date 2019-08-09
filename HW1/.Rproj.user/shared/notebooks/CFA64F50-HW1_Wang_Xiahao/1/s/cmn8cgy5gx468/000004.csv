@@ -1,0 +1,8 @@
+"0","ytm <- 0.01 # semiannual payment"
+"0","cf <- c(rep(5,49),105) # cf of 5 dollar every 6 month"
+"0","discount <- 1 / (ytm + 1)^seq(1,50,1)"
+"0","price <- sum(cf * discount)"
+"0","cat(""Bond price is "", price)"
+"1","Bond price is "
+"1"," "
+"1","256.7845"

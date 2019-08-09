@@ -1,0 +1,174 @@
+---
+title: "HW7 Fixed Income"
+author: "Haoxuan Tong, Yuhua Deng, Xiahao Wang, Nupur Solanki"
+date: "May 28, 2019"
+output: pdf_document
+---
+
+##Group: Haoxuan Tong, Yuhua Deng, Xiahao Wang, Nupur Solanki
+
+
+## Qn 1 
+
+```{r}
+suppressMessages(require(data.table))
+suppressMessages(require(kableExtra))
+suppressMessages(require(knitr))
+rm(list=ls())
+
+# correlation matrix
+corrin <- as.data.frame(read.csv("Homework_7_corrin.csv", header = F))
+
+# cholesky decomposition of the correlation matrix
+corchol <- as.matrix(read.csv("Homework_7_corchol.csv", header = F))
+
+# D(T)
+dt <- as.data.frame(read.csv("Homework_7_pfilea.csv", header = F))
+
+# sigma 
+sigma <- as.data.frame(read.csv("Homework_7_sigma.csv", header = F))
+
+dt <- as.matrix(dt[1:20,], ncol=1)
+sigma <- as.matrix(sigma[1:19,], ncol=1)
+
+result <- matrix(0, nrow=20, ncol=20)
+result[,1] <- dt
+nSims <- 10000
+deltat <- 0.5
+
+for(i in (1:19)){
+  rCur <- (1/result[i,i] -1)*2
+  
+  currStepNumber <- (19-i+1)
+  
+  # sigma for each step
+  sigmaCurr <- sigma[1:currStepNumber]
+  
+  # dt for each step 
+  dtCurr <- result[(i+1):20, i]
+  
+  # dim (currStepNumber X 10000) matrix of rnorms
+  zmatCurr <- matrix(rnorm(n=nSims * currStepNumber) ,nrow=currStepNumber)
+  
+  # use cholesky decomposition of the correlation matrix to obtain
+  # the matrix with dim(currStepNumber X 10000)
+  corcholCur <- corchol[1:currStepNumber, 1:currStepNumber]
+  # correlated brownian motion is equal to cholesky decomposition the standard norm random variables
+  dZs <- corcholCur %*% zmatCurr
+  
+  tempResult <- rowMeans((dtCurr + rCur * dtCurr * deltat) + sigmaCurr * dZs * sqrt(deltat))
+  
+  tempResult <- c(rep(0, (i-1)),1, tempResult)
+  result[,(i + 1)] <-  tempResult
+}
+result <- cbind(result , c(rep(0,19),1))
+colnames(result) <- seq(0, 10,0.5)
+rownames(result) <- seq(0.5,10,0.5)
+
+kable(result, "latex", booktabs =T, caption = "String Model Forward rates", align ="l") %>% kable_styling(latex_options = c("striped", "scale_down"))
+```
+
+## Qn 2 
+
+Forward Par rates for 1 to 5 year semiannual coupon bonds 5 years forward
+
+```{r}
+period <- c(1,2,3,4,5) * 2
+
+inital_dt <- dt[10]
+
+# the forward par rate based on the initial term structure
+# at t =0, the price is 100
+forward_par_rate <- sapply(period, function(x){
+  2 * 100 * (inital_dt - dt[10 + x])/sum(dt[(10 + 1):(10+x)])
+  })
+q2_result <- as.matrix(forward_par_rate)
+colnames(q2_result) <- "Forward Rate"
+rownames(q2_result) <- paste0("Year-",1:5)
+
+kable(q2_result, caption = "Forward par rates", align ="l")
+```
+
+## Qn 3
+
+```{r}
+
+payoff <- rep(0,10000)
+
+# simulation for each path 
+for(n in 1:10000){
+  
+  q3_result <- matrix(0, nrow=20, ncol=20)
+  q3_result[, 1] <- dt
+  
+  # simluate the DTs for a single iteration
+  for(i in (1:19)){
+    rCur <- (1/q3_result[i,i] -1)*2
+    
+    currStepNumber <- (19-i+1)
+    
+    # sigma for each step
+    sigmaCurr <- sigma[1:currStepNumber]
+    
+    # dt for each step 
+    dtCurr <- q3_result[(i+1):20, i]
+    
+    # dim (currStepNumber X 10000) matrix of rnorms
+    zmatCurr <- matrix(rnorm(n=1 * currStepNumber) ,nrow=currStepNumber)
+    
+    # use cholesky decomposition of the correlation matrix to obtain
+    # the matrix with dim(currStepNumber X 10000)
+    corcholCur <- corchol[1:currStepNumber, 1:currStepNumber]
+    # correlated brownian motion is equal to cholesky decomposition the standard norm random variables
+    dZs <- corcholCur %*% zmatCurr
+    
+    tempResult <- (dtCurr + rCur * dtCurr * deltat) + sigmaCurr * dZs * sqrt(deltat)
+    
+    tempResult <- c(rep(0, (i-1)),1, tempResult)
+    q3_result[,(i + 1)] <-  tempResult
+  }
+  price <- rep(0, 5)
+  # 1 year coupon paying at fifth year, 11th column
+  price[1] <- (forward_par_rate[1]/2) * sum(q3_result[11:12,11]) + 100 * q3_result[12,11]
+  price[2] <- (forward_par_rate[2]/2) * sum(q3_result[11:14,11]) + 100 * q3_result[14,11]
+  price[3] <- (forward_par_rate[3]/2) * sum(q3_result[11:16,11]) + 100 * q3_result[16,11]
+  price[4] <- (forward_par_rate[4]/2) * sum(q3_result[11:18,11]) + 100 * q3_result[18,11]
+  price[5] <- (forward_par_rate[5]/2) * sum(q3_result[11:20,11]) + 100 * q3_result[20,11]
+  payoff[n] <- min(price)
+}
+
+futuer_price <- mean(payoff) * dt[10,1]
+cat("The future price is : ", futuer_price,"\n")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

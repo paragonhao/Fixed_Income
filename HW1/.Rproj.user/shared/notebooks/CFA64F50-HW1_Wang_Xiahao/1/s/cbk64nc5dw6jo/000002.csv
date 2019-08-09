@@ -1,0 +1,12 @@
+"0","annuity <- 10000
+# 25 years in total
+n <- 25
+discount <- 1/1.03^(seq(1,n,1))
+cf <- rep(annuity, n)
+pv_21 <- sum(cf * discount)
+pv <- pv_21 /((1.03)^20)
+cat(""Annuity PV: "", pv)
+"
+"1","Annuity PV: "
+"1"," "
+"1","96412.38"

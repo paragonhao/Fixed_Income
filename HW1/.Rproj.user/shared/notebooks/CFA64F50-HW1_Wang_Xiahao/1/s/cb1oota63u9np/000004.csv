@@ -1,0 +1,9 @@
+"0","cf <- rep(14000,120)
+r <- 0.04/12
+d <- (1+r)^(seq(119,0,-1))
+accSum <- sum(d * cf) + 1000000*(1+r)^120
+cat(""Accummulative sum is "", accSum)
+"
+"1","Accummulative sum is "
+"1"," "
+"1","3552330"

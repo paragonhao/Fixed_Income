@@ -1,0 +1,72 @@
+---
+header-includes:
+- \usepackage{amssymb, amsmath, amsthm}
+- \usepackage{tabu}
+- \newcommand{\E}{\mathbb{E}}
+- \newcommand{\var}{{\rm Var}}
+- \newcommand{\N}{\mathcal{N}}
+output: pdf_document
+---
+
+\noindent \begin{tabu} to \textwidth {@{}X[4 l] @{}X[r]}
+  \textbf{Case 1}           & \\ 
+  \textbf{MFE 408: Fixed Income}   & \\ 
+  \textbf{Professor Longstaff}         & \\
+  \textbf{Group 9}          &\\
+  \textbf{Students: Yuhua Deng, Xiahao Wang, Nupur Solanki, Haoxuan Tong}
+\end{tabu}
+
+## Arbitrage Case 1
+
+### To find the arbitrage opportunity, we need to find 2 treasury bonds, 1 treasury strip principle bond expiring on the same day.
+
+Step 1:Create a replicated bond of the smaller coupon bond, using the strip coupon bond and the higher coupon bond.
+
+Step 2: Compare the price of the replicated and actual bond, long the cheaper and short the expensive
+
+We will illustrate with one example:
+
+From the slides, we know that current Date: 9th Jan 2015
+Bonds with Maturity Date: 11/15/22
+Previous coupon payment: 11/15/2014
+
+Treasurey strip: 86.15
+
+Find clean price
+Coupon Bond A with rate 1.625: 98.57812
+Coupon Bond B with rate 7.625: 143.0625
+
+Find dirty price
+
+```{r}
+bondAPrice <- 98.57812
+bondARate <- 1.625
+
+bondBPrice <- 143.0625
+bondBRate <- 7.625
+
+daysSincePayment <- as.numeric(as.Date('01/09/2015','%m/%d/%Y') - as.Date('11/15/2014','%m/%d/%Y'))
+daysInBetweenPayments <- 182
+
+dirty_priceA <- (daysSincePayment/daysInBetweenPayments) * (bondARate/2) + bondAPrice
+dirty_priceB <- (daysSincePayment/daysInBetweenPayments) * (bondBRate/2) + bondBPrice
+cat("Dirty price for A: ", dirty_priceA,"\n")
+cat("Dirty price for B: ", dirty_priceB)
+```
+
+To generate a low coupon bond
+
+$$a * 0 + (1 - a) * 7.625 = 1.625$$
+```{r}
+a <- (7.626 -1.625) / 7.625
+cat("a: ",a,"\n")
+
+bondPrice <- a * 86.15 + (1-a) * dirty_priceB
+cat("Bond price for the replicated bond is: ",bondPrice,"\n")
+cat("This price is lower than the dirty price for bond with coupon rate 1.625, which is ",dirty_priceA)
+```
+Hence, We long the replicated bond using 0 coupon and 7.625 coupon bond, and short actual 1.625 coupon bond to realize a profit of 0.31
+
+
+
+

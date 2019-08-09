@@ -1,0 +1,162 @@
+---
+header-includes:
+- \usepackage{amssymb, amsmath, amsthm}
+- \usepackage{tabu}
+- \newcommand{\E}{\mathbb{E}}
+- \newcommand{\var}{{\rm Var}}
+- \newcommand{\N}{\mathcal{N}}
+output: pdf_document
+---
+
+\noindent \begin{tabu} to \textwidth {@{}X[4 l] @{}X[r]}
+  \textbf{HW 1}           & \\ 
+  \textbf{MFE 408: Fixed Income}   & \\ 
+  \textbf{Professor Longstaff}         & \\
+  \textbf{Group 6}          &\\
+  \textbf{Students: Xiahao Wang}
+\end{tabu}
+
+
+## Qn1
+
+Assume the face value of the bond at maturity is 100
+```{r}
+ytm <- 0.01 # semiannual payment
+cf <- c(rep(5,49),105) # cf of 5 dollar every 6 month
+
+discount <- 1 / (ytm + 1)^seq(1,50,1)
+price <- sum(cf * discount)
+cat("Bond price is ", price)
+```
+
+## Qn2
+
+```{r}
+cf <- 6.25
+discount <- 0.07
+
+price <- cf/(discount/2)
+cat("willing to pay ", price)
+```
+
+## Qn3 
+
+Assume the first month you receive both downpayment and monthly payment
+
+```{r}
+# figure out the cash flow 
+cf <- rep(14000,120)
+r <- 0.04/12
+d <- (1+r)^(seq(119,0,-1))
+accSum <- sum(d * cf) + 1000000*(1+r)^120
+cat("Accummulative sum is ", accSum)
+```
+
+## Qn4
+
+```{r}
+g <- 0.03
+div <- 10
+r <- 0.12
+p <- div /(r - g)
+cat("Willing to pay: ", p)
+```
+
+## Qn 5
+
+```{r}
+cf1 <- 1000
+r <- 0.1
+cf <- cf1 * (1+r)^seq(0,5,1)
+cf <- c(cf, rep(1610.51,24))
+
+discount <- 1/(1.035^(seq(1,30,1)))
+pv <- sum(cf * discount)
+
+cat("PV: ", pv)
+```
+
+## Qn 6
+
+```{r}
+annuity <- 10000
+# 25 years in total
+n <- 25
+discount <- 1/1.03^(seq(1,n,1))
+cf <- rep(annuity, n)
+pv_21 <- sum(cf * discount)
+pv <- pv_21 /((1.03)^20)
+cat("Annuity PV: ", pv)
+```
+
+
+## Qn 7 
+
+```{r}
+library(FinCal)
+FV <- 1000
+r <- 0.03
+cf1 <- c(rep(FV*r, 39),1030)
+cf <- c(-893.22, cf1)
+
+cat("YTM is: ", irr(cf)*2)
+```
+
+## Arbitrage Case 1
+
+### To find the arbitrage opportunity, we need to find 2 treasury bonds, 1 treasury strip principle bond expiring on the same day.
+
+Step 1:Create a replicated bond of the smaller coupon bond, using the strip coupon bond and the higher coupon bond.
+
+Step 2: Compare the price of the replicated and actual bond, long the cheaper and short the expensive
+
+We will illustrate with one example:
+
+From the slides, we know that current Date: 9th Jan 2015
+Bonds with Maturity Date: 11/15/22
+Previous coupon payment: 11/15/2014
+
+Treasurey strip: 86.15
+
+Find clean price
+Coupon Bond A with rate 1.625: 98.57812
+Coupon Bond B with rate 7.625: 143.0625
+
+Find dirty price
+
+```{r}
+bondAPrice <- 98.57812
+bondARate <- 1.625
+
+bondBPrice <- 143.0625
+bondBRate <- 7.625
+
+daysSincePayment <- as.numeric(as.Date('01/09/2015','%m/%d/%Y') - as.Date('11/15/2014','%m/%d/%Y'))
+daysInBetweenPayments <- 182
+
+dirty_priceA <- (daysSincePayment/daysInBetweenPayments) * (bondARate/2) + bondAPrice
+dirty_priceB <- (daysSincePayment/daysInBetweenPayments) * (bondBRate/2) + bondBPrice
+cat("Dirty price for A: ", dirty_priceA,"\n")
+cat("Dirty price for B: ", dirty_priceB)
+```
+
+To generate a low coupon bond
+
+$$a * 0 + (1 - a) * 7.625 = 1.625$$
+```{r}
+a <- (7.626 -1.625) / 7.625
+cat("a: ",a,"\n")
+
+bondPrice <- a * 86.15 + (1-a) * dirty_priceB
+cat("Bond price for the replicated bond is: ",bondPrice,"\n")
+cat("This price is lower than the dirty price for bond with coupon rate 1.625, which is ",dirty_priceA)
+```
+Hence, We long the replicated bond using 0 coupon and 7.625 coupon bond, and short actual 1.625 coupon bond to realize a profit of 0.31
+
+
+
+## Arbitrage Case 2
+
+
+
+

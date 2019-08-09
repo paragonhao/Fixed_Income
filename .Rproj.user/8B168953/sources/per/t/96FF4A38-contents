@@ -1,0 +1,152 @@
+---
+title: "HW7 Fixed Income"
+author: "Haoxuan Tong, Yuhua Deng, Xiahao Wang, Nupur Solanki"
+date: "June 06, 2019"
+output: pdf_document
+---
+
+##Group: Haoxuan Tong, Yuhua Deng, Xiahao Wang, Nupur Solanki
+
+## Qn 1 
+
+Run the string model in the same way as HW 7 
+
+* Calculate  CMS rates using par rate forumla
+
+For each simulation:
+
+* Find the 6 months forward rates at each period
+
+
+```{r}
+suppressMessages(require(data.table))
+suppressMessages(require(kableExtra))
+suppressMessages(require(knitr))
+rm(list=ls())
+
+# correlation matrix
+corrin <- as.data.frame(read.csv("Homework_7_corrin.csv", header = F))
+
+# cholesky decomposition of the correlation matrix
+corchol <- as.matrix(read.csv("Homework_7_corchol.csv", header = F))
+
+# D(T)
+dt <- as.data.frame(read.csv("Homework_7_pfilea.csv", header = F))
+
+# sigma 
+sigma <- as.data.frame(read.csv("Homework_7_sigma.csv", header = F))
+
+string_model <- function(sigma, corrin, dt){
+  sigma_length <- length(sigma)
+  dt_length <- length(dt)
+  q3_result <- matrix(0, nrow=dt_length, ncol=dt_length)
+  q3_result[, 1] <- dt
+  
+  # simluate the DTs for a single iteration
+  for(i in (1:sigma_length)){
+    rCur <- (1/q3_result[i,i] -1)*2
+    
+    currStepNumber <- (sigma_length-i+1)
+    
+    # sigma for each step
+    sigmaCurr <- sigma[1:currStepNumber]
+    
+    # dt for each step 
+    dtCurr <- q3_result[(i+1):dt_length, i]
+    
+    # dim (currStepNumber X 10000) matrix of rnorms
+    zmatCurr <- matrix(rnorm(n=1 * currStepNumber) ,nrow=currStepNumber)
+    
+    # use cholesky decomposition of the correlation matrix to obtain
+    # the matrix with dim(currStepNumber X 10000)
+    corcholCur <- corchol[1:currStepNumber, 1:currStepNumber]
+    # correlated brownian motion is equal to cholesky decomposition the standard norm random variables
+    dZs <- corcholCur %*% zmatCurr
+    
+    tempResult <- (dtCurr + rCur * dtCurr * deltat) + sigmaCurr * dZs * sqrt(deltat)
+    
+    tempResult <- c(rep(0, (i-1)), 1, tempResult)
+    q3_result[,(i + 1)] <-  tempResult
+  }
+  q3_result <- cbind(q3_result , c(rep(0,sigma_length),1))
+  return(q3_result)
+}
+
+dt <- as.matrix(dt[1:20,], ncol=1)
+sigma <- as.matrix(sigma[1:19,], ncol=1)
+nSims <- 10000
+deltat <- 0.5
+result <- array(dim = c(length(dt), (length(dt)+1), nSims))
+
+for (i in 1:nSims){
+  result[,,i] <- string_model(sigma, corrin, dt)
+}
+
+all_path <- as.list(rep(0,nSims))
+for(i in c(1:nSims)){
+  all_path[[i]] <- result[,,i]
+}
+
+```
+
+
+```{r}
+# cms par rate 
+cms <- sapply(c(1:length(dt)), function(m){2 * 100 * (1 - dt[m])/(sum(dt[1:m]))})/100
+
+# 6 month DTs 
+all_dis_fac <- sapply(all_path,  function(x){diag(x)})
+
+forward_rates <- 2*((1/all_dis_fac)-1)
+
+# Calculate payoff of caplets
+payoff <- 0.5 * sapply(c(1:length(all_path)),
+  function(count){
+    pmax(forward_rates[,count] - cms, 0.0)
+})
+
+# Calculate present value of caplet
+dis_cf <- apply(all_dis_fac,2,cumprod)  
+discount_payoffs <- payoff * dis_cf
+
+yrs <- c(2,3,4,5,7,10)
+answers <- sapply(2 * yrs, function(x){ 
+  mean(apply(discount_payoffs[2:x,], 2, sum))
+})
+kable(cbind(yrs,answers),col.names = c("cap count","price"))
+```
+
+
+
+
+## Qn 2 
+
+
+```{r}
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
